@@ -57,7 +57,7 @@ Return ONLY a valid JSON array — no markdown fences, no preamble, no trailing 
     const models = [
       'gemini-1.5-flash',
       'gemini-1.5-flash-8b',
-      'gemini-2.0-flash-lite',
+      //'gemini-2.0-flash-lite',
     ]
 
     let geminiData = null
