@@ -45,23 +45,31 @@ Return ONLY a valid JSON array, no markdown, no extra text:
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set.')
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+    const models = [
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+    ]
 
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.85, maxOutputTokens: 4096 }
+    let geminiData = null
+    let lastError = ''
+
+    for (const model of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+      const geminiRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.85, maxOutputTokens: 4096 }
+        })
       })
-    })
-
-    const geminiData = await geminiRes.json()
-
-    if (!geminiRes.ok) {
-      const msg = geminiData?.error?.message || 'Gemini API error'
-      throw new Error(msg)
+      geminiData = await geminiRes.json()
+      if (geminiRes.ok) break
+      lastError = geminiData?.error?.message || `Model ${model} failed`
+      geminiData = null
     }
+
+    if (!geminiData) throw new Error(lastError || 'Generation failed. Please try again.')
 
     const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const cleaned = raw.replace(/```json|```/gi, '').trim()
@@ -80,4 +88,4 @@ Return ONLY a valid JSON array, no markdown, no extra text:
     console.error('Generate error:', err.message)
     return res.status(500).json({ error: err.message || 'Failed to generate questions.' })
   }
-      }
+}
