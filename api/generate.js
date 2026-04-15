@@ -7,14 +7,13 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { topic, level, difficulty, count, type, includeAnswers } = req.body
-
   if (!topic) return res.status(400).json({ error: 'Topic is required.' })
 
   const ansInstruction =
     includeAnswers === 'yes'
-      ? 'Include a thorough step-by-step worked solution for each question in the "answer" field.'
+      ? 'Include a thorough step-by-step worked solution in the "answer" field.'
       : includeAnswers === 'brief'
-      ? 'Include only the final answer (no working) in the "answer" field.'
+      ? 'Include only the final answer in the "answer" field.'
       : 'Set "answer" to null for every question.'
 
   const prompt = `You are an expert mathematics teacher and exam paper setter.
@@ -46,32 +45,23 @@ Return ONLY a valid JSON array, no markdown, no extra text:
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set.')
 
-    const models = [
-      'gemini-1.5-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-pro',
-    ]
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
-    let geminiData = null
-    let lastError = ''
-
-    for (const model of models) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-      const geminiRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.85, maxOutputTokens: 4096 }
-        })
+    const geminiRes = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.85, maxOutputTokens: 4096 }
       })
-      geminiData = await geminiRes.json()
-      if (geminiRes.ok) break
-      lastError = geminiData?.error?.message || `Model ${model} failed`
-      geminiData = null
-    }
+    })
 
-    if (!geminiData) throw new Error(lastError || 'All Gemini models failed. Please try again.')
+    const geminiData = await geminiRes.json()
+
+    if (!geminiRes.ok) {
+      const msg = geminiData?.error?.message || 'Gemini API error'
+      throw new Error(msg)
+    }
 
     const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const cleaned = raw.replace(/```json|```/gi, '').trim()
@@ -90,4 +80,4 @@ Return ONLY a valid JSON array, no markdown, no extra text:
     console.error('Generate error:', err.message)
     return res.status(500).json({ error: err.message || 'Failed to generate questions.' })
   }
-}
+      }
