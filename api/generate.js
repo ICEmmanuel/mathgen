@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       ? 'Include only the final answer (no working) in the "answer" field.'
       : 'Set "answer" to null for every question.'
 
-  const prompt = `You are an expert mathematics teacher and exam paper setter with decades of experience writing challenging, high-quality assessments.
+  const prompt = `You are an expert mathematics teacher and exam paper setter.
 
 Generate exactly ${count} mathematics questions on the topic: "${topic}".
 
@@ -26,25 +26,19 @@ Requirements:
 - Difficulty: ${difficulty}
 - Question type: ${type}
 - ${ansInstruction}
-- CRITICAL: Questions must be INDIRECT and NON-TRIVIAL. Avoid straightforward formula substitution. Use:
-  * Real-world contextual problems
-  * Multi-step reasoning chains
-  * Unexpected angles or reverse-engineering
-  * "Show that..." / proof-based approaches
-  * Scenarios where students must identify which concept to apply
-- Each question must test genuine conceptual understanding, not mere recall.
-- Use plain-text math notation: x^2 for squared, sqrt(x) for square root, pi for pi, etc.
-- Make each question distinctly different in phrasing, context, and approach.
-- Assign realistic mark allocations (2-10 marks) based on complexity.
+- Questions must be indirect and non-trivial, testing deep understanding.
+- Use plain-text math: x^2 for squared, sqrt(x) for square root, pi for pi.
+- Each question must be distinctly different in phrasing and context.
+- Assign mark allocations (2-10 marks) based on complexity.
 
-Return ONLY a valid JSON array - no markdown fences, no preamble, no trailing text:
+Return ONLY a valid JSON array, no markdown, no extra text:
 [
   {
     "question": "full question text",
     "difficulty": "Easy or Medium or Hard or Very Hard",
     "type": "Word problem or Calculation or Proof or Multi-step or Multiple choice",
     "marks": 5,
-    "answer": "worked solution or brief answer or null"
+    "answer": "worked solution or null"
   }
 ]`
 
@@ -77,7 +71,7 @@ Return ONLY a valid JSON array - no markdown fences, no preamble, no trailing te
       geminiData = null
     }
 
-    if (!geminiData) throw new Error(lastError || 'All Gemini models failed. Please try again shortly.')
+    if (!geminiData) throw new Error(lastError || 'All Gemini models failed. Please try again.')
 
     const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const cleaned = raw.replace(/```json|```/gi, '').trim()
@@ -87,7 +81,7 @@ Return ONLY a valid JSON array - no markdown fences, no preamble, no trailing te
       questions = JSON.parse(cleaned)
     } catch {
       const match = cleaned.match(/\[[\s\S]*\]/)
-      if (!match) throw new Error('Could not parse questions from AI response.')
+      if (!match) throw new Error('Could not parse AI response.')
       questions = JSON.parse(match[0])
     }
 
